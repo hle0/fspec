@@ -1,0 +1,9 @@
+[submodule "extern/kissfft"]
+	path = extern/kissfft
+	url = https://github.com/mborgerding/kissfft.git
+[submodule "extern/portaudio"]
+	path = extern/portaudio
+	url = https://github.com/PortAudio/portaudio.git
+[submodule "extern/sndfile"]
+	path = extern/sndfile
+	url = https://github.com/libsndfile/libsndfile.git

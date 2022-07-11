@@ -7,4 +7,5 @@ target_link_libraries(${PROJECT_NAME}
     portaudio
     sndfile
     SDL2
+    nfd
 )

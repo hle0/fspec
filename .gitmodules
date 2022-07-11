@@ -7,3 +7,6 @@
 [submodule "extern/sndfile"]
 	path = extern/sndfile
 	url = https://github.com/libsndfile/libsndfile.git
+[submodule "extern/nfd"]
+	path = extern/nfd
+	url = https://github.com/btzy/nativefiledialog-extended.git

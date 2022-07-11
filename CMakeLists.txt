@@ -7,6 +7,7 @@ include(FetchContent)
 add_subdirectory(extern/kissfft)
 add_subdirectory(extern/portaudio)
 add_subdirectory(extern/sndfile)
+add_subdirectory(extern/nfd)
 
 find_package(kissfft REQUIRED)
 find_package(PortAudio REQUIRED)

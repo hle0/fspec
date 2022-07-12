@@ -32,8 +32,8 @@ class App {
         }
 
         ~App() {
+            NFD::Quit();
             SDL_Quit();
-            NFD_Quit();
             Pa_Terminate();
         }
 };

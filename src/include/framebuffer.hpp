@@ -8,6 +8,7 @@
 #include <array>
 
 #include "include/resource.hpp"
+#include "include/ring_buffer.hpp"
 
 #define NFFT 8192
 
@@ -32,10 +33,8 @@ namespace fspec {
             void add_sample(float sample);
             void update_texture();
         protected:
-            std::vector<float> raw_samples;
-            std::vector<std::array<float, NFFT/2+1>> fft_samples;
-
-            int cursor = 0;
+            ring_buffer<float> raw_samples;
+            ring_buffer<std::array<float, NFFT/2+1>> fft_samples;
 
             kiss_fftr_cfg fft_cfg;
             std::array<kiss_fft_scalar, NFFT> fft_tmp_scalar;

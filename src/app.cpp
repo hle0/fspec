@@ -18,7 +18,7 @@ fspec::App::App() {
     this->surface = SDL_CHECK_NULL2(SDL_Surface, SDL_GetWindowSurface(this->window));
     this->renderer = SDL_CHECK_NULL2(SDL_Renderer, SDL_CreateRenderer(this->window, -1, 0));
 
-    this->framebuffer = fspec::Framebuffer(64, 2000, this->renderer);
+    this->framebuffer = fspec::Framebuffer(44100 * 10, 1000, 441, 2048, this->renderer);
     this->audio = std::make_shared<fspec::PortAudioStream>();
 }
 

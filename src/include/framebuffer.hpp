@@ -10,37 +10,48 @@
 #include "include/resource.hpp"
 #include "include/ring_buffer.hpp"
 
-#define NFFT 8192
+#define SAMPLE_RATE 44100
 
 namespace fspec {
     class Framebuffer : public Resource {
         public:
             int fft_stride;
-            int num_fft_frames;
 
-            inline const int num_frames() const {
-                return this->fft_stride * this->num_fft_frames;
+            inline const int num_fft_samples() const {
+                return this->fft_samples.size();
+            }
+
+            inline const int num_raw_samples() const {
+                return this->raw_samples.size();
+            }
+
+            inline const int scalar_fft_size() const {
+                return this->fft_tmp_scalar.size();
+            }
+
+            inline const int cpx_fft_size() const {
+                return this->fft_tmp_cpx.size();
+            }
+
+            inline const double frequency_bin_width() const {
+                return 1.0 * SAMPLE_RATE / this->scalar_fft_size();
             }
 
             SDL_Texture *texture;
 
             inline Framebuffer() {}; // default
-            Framebuffer(int i_fft_stride, int i_num_fft_frames, SDL_Renderer *renderer);
+            Framebuffer(int i_num_raw_samples, int i_num_fft_samples, int i_fft_stride, int i_fft_size, SDL_Renderer *renderer);
             virtual void destroy() override;
-
-            int get_frequency_for_bin(int bin, int height);
 
             void add_sample(float sample);
             void update_texture();
         protected:
             ring_buffer<float> raw_samples;
-            ring_buffer<std::array<float, NFFT/2+1>> fft_samples;
+            ring_buffer<std::vector<float>> fft_samples;
 
             kiss_fftr_cfg fft_cfg;
-            std::array<kiss_fft_scalar, NFFT> fft_tmp_scalar;
-            std::array<kiss_fft_cpx, NFFT/2+1> fft_tmp_cpx;
-
-            std::vector<int> bin_mapping;
+            std::vector<kiss_fft_scalar> fft_tmp_scalar;
+            std::vector<kiss_fft_cpx> fft_tmp_cpx;
     };
 }
 

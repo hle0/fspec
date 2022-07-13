@@ -5,38 +5,26 @@
 #include "include/framebuffer.hpp"
 #include "include/util.hpp"
 
-fspec::Framebuffer::Framebuffer(int i_fft_stride, int i_num_fft_frames, SDL_Renderer *renderer) {
+fspec::Framebuffer::Framebuffer(int i_num_raw_samples, int i_num_fft_samples, int i_fft_stride, int i_fft_size, SDL_Renderer *renderer) {
+    this->fft_tmp_scalar = std::vector<kiss_fft_scalar>(i_fft_size);
+    this->fft_tmp_cpx = std::vector<kiss_fft_cpx>(i_fft_size / 2 + 1);
+
+    this->fft_cfg = kiss_fftr_alloc(this->scalar_fft_size(), 0, 0, 0);
+
     this->fft_stride = i_fft_stride;
-    this->num_fft_frames = i_num_fft_frames;
 
-    this->raw_samples = ring_buffer<float>(this->num_frames());
-    this->fft_samples = ring_buffer<std::array<float, NFFT/2+1>>(this->num_fft_frames);
-
-    this->fft_cfg = kiss_fftr_alloc(NFFT, 0, 0, 0);
+    this->raw_samples = ring_buffer<float>(i_num_raw_samples);
+    this->fft_samples = make_ring_buffer_2d<float>(i_num_fft_samples, this->cpx_fft_size());
 
     int height = 2048;
 
-    this->texture = SDL_CHECK_NULL2(SDL_Texture, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, this->num_fft_frames, height));
-    
-    for (int i = 0; i < height; i++) {
-        int freq = this->get_frequency_for_bin(i, height);
-
-        if (freq > NFFT/2 + 1) {
-            freq = NFFT/2 + 1;
-        }
-
-        this->bin_mapping.push_back(freq);
-    }
+    this->texture = SDL_CHECK_NULL2(SDL_Texture, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, this->cpx_fft_size(), height));
 }
 
 void fspec::Framebuffer::destroy() {
     SDL_DestroyTexture(this->texture);
 
     // kiss_fftr_free(this->fft_cfg);
-}
-
-int fspec::Framebuffer::get_frequency_for_bin(int bin, int height) {
-    return (NFFT/2 + 1) * bin / height;
 }
 
 void fspec::Framebuffer::add_sample(float sample) {
@@ -47,14 +35,16 @@ void fspec::Framebuffer::add_sample(float sample) {
     if (this->raw_samples.cursor % this->fft_stride == 0) {
         // recompute fft
 
-        for (int i = 0; i < NFFT; i++) {
-            this->fft_tmp_scalar[i] = this->raw_samples[i - NFFT]; // this will be a negative index
+        for (int i = 0; i < this->scalar_fft_size(); i++) {
+            this->fft_tmp_scalar[i] = this->raw_samples[i - this->scalar_fft_size()]; // this will be a negative index
         }
         
         kiss_fftr(this->fft_cfg, this->fft_tmp_scalar.data(), this->fft_tmp_cpx.data());
 
-        for (int i = 0; i < NFFT/2 + 1; i++) {
-            this->fft_samples[0][i] = this->fft_tmp_cpx[i].r;
+        for (int i = 0; i < this->cpx_fft_size(); i++) {
+            auto cpx = this->fft_tmp_cpx[i];
+
+            this->fft_samples[0][i] = cpx.r * cpx.r + cpx.i * cpx.i;
         }
 
         this->fft_samples.advance();
@@ -78,7 +68,9 @@ void fspec::Framebuffer::update_texture() {
 
         for (int j = 0; j < height; j++) {
             uint8_t *ptr = &pixels[4 * i + pitch * (height - j - 1)];
-            uint8_t value = (uint8_t) (std::abs(samples[this->bin_mapping[j]]) * 4.0 + 127.0);
+            double mag = std::abs(samples[int(j / this->frequency_bin_width())]);
+
+            uint8_t value = (uint8_t) std::max(0.0, std::min(255.0, mag * 1.0 + 127.0));
 
             *ptr++ = value;
             *ptr++ = value;
@@ -88,7 +80,7 @@ void fspec::Framebuffer::update_texture() {
     }
 
     for (int j = 0; j < height; j += 16) {
-        auto value = this->fft_samples[-1][this->bin_mapping[j]];
+        auto value = this->fft_samples[-1][int(j / this->frequency_bin_width())];
 
         printf("%d: %f\n", j, value);
     }

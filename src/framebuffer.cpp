@@ -16,7 +16,7 @@ fspec::Framebuffer::Framebuffer(int i_fft_stride, int i_num_fft_frames, SDL_Rend
 
     int height = 2048;
 
-    this->texture = SDL_CHECK_NULL2(SDL_Texture, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, this->num_fft_frames, height));
+    this->texture = SDL_CHECK_NULL2(SDL_Texture, SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, this->num_fft_frames, height));
     
     for (int i = 0; i < height; i++) {
         int freq = this->get_frequency_for_bin(i, height);
@@ -77,13 +77,13 @@ void fspec::Framebuffer::update_texture() {
         auto samples = this->fft_samples[i - width]; // this will be a negative index
 
         for (int j = 0; j < height; j++) {
-            uint8_t *ptr = &pixels[i * 4 + pitch * (height - j - 1)];
+            uint8_t *ptr = &pixels[4 * i + pitch * (height - j - 1)];
             uint8_t value = (uint8_t) (std::abs(samples[this->bin_mapping[j]]) * 4.0 + 127.0);
 
+            *ptr++ = value;
+            *ptr++ = value;
+            *ptr++ = value;
             *ptr++ = 255;
-            *ptr++ = value;
-            *ptr++ = value;
-            *ptr++ = value;
         }
     }
 

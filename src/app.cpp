@@ -7,37 +7,26 @@
 #include <chrono>
 
 #include "include/app.hpp"
+#include "include/util.hpp"
 
 fspec::App::App() {
-    auto err = Pa_Initialize();
-    if (err != paNoError) {
-        printf("PortAudio error: %s\n", Pa_GetErrorText(err));
-
-        throw std::runtime_error("PortAudio init error");
-    }
-
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
-        puts("Error initializing SDL");
-
-        throw std::runtime_error("SDL init error");
-    }
-
-    if (NFD::Init() == NFD_ERROR) {
-        throw std::runtime_error("NFD init error");
-    }
-
-    this->window = SDL_CreateWindow("fspec", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
-    if (window == NULL) {
+    this->window = SDL_CHECK_NULL2(SDL_Window, SDL_CreateWindow("fspec", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN));
+    if (this->window == NULL) {
         throw std::runtime_error("SDL window creation error");
     }
 
-    this->surface = SDL_GetWindowSurface(window);
+    this->surface = SDL_CHECK_NULL2(SDL_Surface, SDL_GetWindowSurface(this->window));
+    this->renderer = SDL_CHECK_NULL2(SDL_Renderer, SDL_CreateRenderer(this->window, -1, 0));
+
+    this->framebuffer = fspec::Framebuffer(64, 2000, this->renderer);
+    this->audio = std::make_shared<fspec::PortAudioStream>();
 }
 
-fspec::App::~App() {
-    NFD::Quit();
-    SDL_Quit();
-    Pa_Terminate();
+void fspec::App::destroy() {
+    this->audio->destroy();
+    this->framebuffer.destroy();
+
+    SDL_DestroyRenderer(this->renderer);
 }
 
 void fspec::App::run() {
@@ -62,10 +51,17 @@ void fspec::App::run() {
         if (!running) {
             break;
         }
+        
+        for (float sample : this->audio->poll()) {
+            this->framebuffer.add_sample(sample);
+        }
+
+        this->framebuffer.update_texture();
 
         // Placeholder stuff
-        SDL_FillRect(this->surface, NULL, SDL_MapRGB(this->surface->format, 0x20, 0x20, 0x20));
-        SDL_UpdateWindowSurface(this->window);
+        SDL_CHECK(SDL_RenderCopy(this->renderer, this->framebuffer.texture, NULL, NULL));
+        SDL_RenderPresent(this->renderer);
+        SDL_CHECK(SDL_RenderClear(this->renderer));
         // End placeholder stuff
 
         auto end = std::chrono::system_clock::now();

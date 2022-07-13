@@ -79,11 +79,5 @@ void fspec::Framebuffer::update_texture() {
         }
     }
 
-    for (int j = 0; j < height; j += 16) {
-        auto value = this->fft_samples[-1][int(j / this->frequency_bin_width())];
-
-        printf("%d: %f\n", j, value);
-    }
-
     SDL_UnlockTexture(this->texture);
 }

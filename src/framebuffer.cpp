@@ -77,7 +77,7 @@ void fspec::Framebuffer::update_texture() {
         auto samples = this->fft_samples[i - width]; // this will be a negative index
 
         for (int j = 0; j < height; j++) {
-            uint8_t *ptr = &pixels[i * 4 + pitch * j];
+            uint8_t *ptr = &pixels[i * 4 + pitch * (height - j - 1)];
             uint8_t value = (uint8_t) (std::abs(samples[this->bin_mapping[j]]) * 4.0 + 127.0);
 
             *ptr++ = 255;
